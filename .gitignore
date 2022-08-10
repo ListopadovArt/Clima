@@ -90,3 +90,5 @@ fastlane/test_output
 iOSInjectionProject/
 /Clima/.DS_Store
 /Clima/Assets.xcassets/.DS_Store
+/.DS_Store
+/Documentation/.DS_Store
