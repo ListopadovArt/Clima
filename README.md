@@ -18,9 +18,7 @@ A beautiful weather app with support for dark mode has been created. The ability
 * Learned to use Core Location to get the current location from the phone GPS. 
 
 
-<table>
   <tr>
     <td><img src="Documentation/readme-screenshot_1.png" width=270 height=480></td>
     <td><img src="Documentation/readme-screenshot_2.png" width=270 height=480></td>
-    </tr>
- </table>
+  </tr>
