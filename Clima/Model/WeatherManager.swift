@@ -20,6 +20,7 @@ protocol WeatherServiceDelegate: AnyObject {
 struct WeatherService {
     var delegate: WeatherServiceDelegate?
     
+    //The key is here: 52698c8333fd8fe9d13e3265b6d93ebf
     let weatherURL = URL(string: "https://api.openweathermap.org/data/2.5/weather?appid=52698c8333fd8fe9d13e3265b6d93ebf&units=metric")!
     
     func fetchWeather(cityName: String) {
