@@ -6,18 +6,30 @@
 import Foundation
 import CoreLocation
 
-protocol WeatherManagerDelegate {
-    func didUpdateWeather(_ weatherManager: WeatherManager, weather: WeatherModel)
-    func didFailWithError(error: Error)
+enum ServiceError: Error {
+    case network(statusCode: Int)
+    case parsing
+    case general(reason: String)
 }
 
-struct WeatherManager {
-    let weatherURL = "https://api.openweathermap.org/data/2.5/weather?appid=52698c8333fd8fe9d13e3265b6d93ebf&units=metric"
+protocol WeatherServiceDelegate: AnyObject {
+    func didFetchWeather(_ weatherService: WeatherService, _ weather: WeatherModel)
+    func didFailWithError(_ weatherService: WeatherService, _ error: ServiceError)
+}
+
+struct WeatherService {
+    var delegate: WeatherServiceDelegate?
     
-    var delegate: WeatherManagerDelegate?
+    let weatherURL = URL(string: "https://api.openweathermap.org/data/2.5/weather?appid=52698c8333fd8fe9d13e3265b6d93ebf&units=metric")!
     
     func fetchWeather(cityName: String) {
-        let urlString = "\(weatherURL)&q=\(cityName)"
+        
+        guard let urlEncodedCityName = cityName.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) else {
+            assertionFailure("Could not encode city named: \(cityName)")
+            return
+        }
+        
+        let urlString = "\(weatherURL)&q=\(urlEncodedCityName)"
         performRequest(with: urlString)
     }
     
@@ -27,38 +39,53 @@ struct WeatherManager {
     }
     
     func performRequest(with urlString: String) {
-        if let url = URL(string: urlString) {
-            let session = URLSession(configuration: .default)
-            let task = session.dataTask(with: url) { (data, response, error) in
-                if error != nil {
-                    self.delegate?.didFailWithError(error: error!)
-                    return
+        let url = URL(string: urlString)!
+        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+            
+            guard let unwrapedData = data,
+                  let httpResponse = response as? HTTPURLResponse
+            else { return }
+            
+            guard error == nil else {
+                DispatchQueue.main.async {
+                    let generalError = ServiceError.general(reason: "Check network availability.")
+                    self.delegate?.didFailWithError(self, generalError)
                 }
-                if let safeData = data {
-                    if let weather = self.parseJSON(safeData) {
-                        self.delegate?.didUpdateWeather(self, weather: weather)
-                    }
-                }
+                return
             }
-            task.resume()
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                DispatchQueue.main.async {
+                    self.delegate?.didFailWithError(self, ServiceError.network(statusCode: httpResponse.statusCode))
+                }
+                return
+            }
+            
+            guard let weather = self.parseJSON(unwrapedData) else { return }
+            
+            DispatchQueue.main.async {
+                self.delegate?.didFetchWeather(self, weather)
+            }
         }
+        task.resume()
     }
     
-    func parseJSON(_ weatherData: Data) -> WeatherModel? {
-        let decoder = JSONDecoder()
-        do {
-            let decodedData = try decoder.decode(WeatherData.self, from: weatherData)
-            let id = decodedData.weather[0].id
-            let temp = decodedData.main.temp
-            let name = decodedData.name
-            
-            let weather = WeatherModel(conditionId: id, cityName: name, temperature: temp)
-            return weather
-            
-        } catch {
-            delegate?.didFailWithError(error: error)
+    private func parseJSON(_ weatherData: Data) -> WeatherModel? {
+        
+        guard let decodedData = try? JSONDecoder().decode(WeatherData.self, from: weatherData) else {
+            DispatchQueue.main.async {
+                self.delegate?.didFailWithError(self, ServiceError.parsing)
+            }
             return nil
         }
+        
+        let id = decodedData.weather[0].id
+        let temp = decodedData.main.temp
+        let name = decodedData.name
+        
+        let weather = WeatherModel(conditionId: id, cityName: name, temperature: temp)
+        
+        return weather
     }
 }
 
