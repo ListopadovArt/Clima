@@ -1,22 +1,64 @@
 #  Clima
 
-A beautiful weather app with support for dark mode has been created. The ability to check the weather for the current location based on GPS data from the iPhone, as well as by manually searching the city.
+### Description:
+A beautiful weather app with support for dark mode has been created. The ability to check the weather for the current location based on GPS data from the iPhone, as well as by manually searching the city. 
 
-## What has been studied
+The UI of the application is completely written in code without the use of storyboards.
 
-* How to create a dark-mode enabled app.
-* How to use vector images as image assets.
-* Learn to use the UITextField to get user input. 
-* Learn about the delegate pattern.
-* Swift protocols and extensions. 
-* Swift guard keyword. 
-* Swift computed properties.
-* Swift closures and completion handlers.
-* Learned to use URLSession to network and make HTTP requests.
-* Parse JSON with the native Encodable and Decodable protocols. 
-* Learned to use Grand Central Dispatch to fetch the main thread.
-* Learned to use Core Location to get the current location from the phone GPS. 
+The project uses an open API https://openweathermap.org
 
+```
+//The key is here:
+    let weatherURL = URL(string: "https://api.openweathermap.org/data/2.5/weather?appid=********************************&units=metric")!
+```
+
+
+
+### Technologies used:
+- Foundation
+- UIKit
+- Core Location
+- URLSession
+- Delegate Pattern
+- Error handling
+```
+enum ServiceError: Error {
+    case network(statusCode: Int)
+    case parsing
+    case general(reason: String)
+}
+```
+- XCTest
+```
+...
+
+func testCanParseWeatherNoCityName() throws {
+        let json = """
+         {
+           "weather": [
+             {
+               "id": 804,
+               "description": "overcast clouds",
+             }
+           ],
+           "main": {
+             "temp": 10.58,
+           },
+           "name": ""
+         }
+        """
+
+        let jsonData = json.data(using: .utf8)!
+        let weatherData = try! JSONDecoder().decode(WeatherData.self, from: jsonData)
+
+        XCTAssertEqual(10.58, weatherData.main.temp)
+        XCTAssertEqual("", weatherData.name)
+    }
+
+...
+```
+
+### Screenshots:
 
   <tr>
     <td><img src="Documentation/readme-screenshot_1.png" width=270 height=480></td>
